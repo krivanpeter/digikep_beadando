@@ -8,12 +8,15 @@ import cv2
 import numpy as np
 
 img = None
+point_img = None
+clicked_points = []
 
 def start(file):
     global img
     img = cv2.imread(file, cv2.IMREAD_COLOR)
     cv2.imshow('rubic', img)
     add_noise_trackbars()
+    cv2.setMouseCallback('rubic', handle_mouse_event)
     while True:
         key = cv2.waitKey(0) & 0xFF
 
@@ -42,6 +45,25 @@ def update_noises(val):
         noisy_img[(rnd >= prob / 2) & (rnd < prob)] = [255, 255, 255]
         
     cv2.imshow('rubic', noisy_img)
+
+
+def handle_mouse_event(event, x, y, flags, param):
+    global img, point_img, clicked_points
+
+    if point_img is None:
+        point_img = np.copy(img)
+
+    if event == cv2.EVENT_LBUTTONDOWN:
+        if len(clicked_points) == 4:
+            point_img = np.copy(img)
+            clicked_points = []
+
+        clicked_points.append((x, y))
+        cv2.circle(point_img, (x, y), 5, (255, 0, 255), -1)
+        cv2.imshow('rubic', point_img)
+
+        if len(clicked_points) == 4:
+            print(clicked_points)
 
 
 def add_noise_trackbars():
