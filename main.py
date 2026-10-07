@@ -91,11 +91,11 @@ def get_center_points_of_tiles():
             bottom_edge_x = left_bottom["x"] + j * (right_bottom["x"] - left_bottom["x"])
             bottom_edge_y = left_bottom["y"] + j * (right_bottom["y"] - left_bottom["y"])
             
-            height_point_x = top_edge_x + i * (bottom_edge_x - top_edge_x)
-            height_point_y = top_edge_y + i * (bottom_edge_y - top_edge_y)
+            current_center_point_x = top_edge_x + i * (bottom_edge_x - top_edge_x)
+            current_center_point_y = top_edge_y + i * (bottom_edge_y - top_edge_y)
             
-            pixel_x = int(height_point_x)
-            pixel_y = int(height_point_y)
+            pixel_x = int(current_center_point_x)
+            pixel_y = int(current_center_point_y)
             
             tile_center_points.append((pixel_x, pixel_y))
     
