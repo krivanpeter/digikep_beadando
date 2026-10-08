@@ -47,7 +47,7 @@ def update_noises(val):
         
     cv2.imshow('rubic', noisy_img)
 
-    point_img = get_image_to_show_circles_on()
+    point_img = get_image_to_work_with()
     clicked_points = []
 
 
@@ -55,22 +55,86 @@ def handle_mouse_event(event, x, y, flags, param):
     global img, noisy_img, point_img, clicked_points
 
     if point_img is None:
-        point_img = get_image_to_show_circles_on()
+        point_img = get_image_to_work_with()
 
     if event == cv2.EVENT_LBUTTONDOWN:
         if len(clicked_points) == 4:
-            point_img = get_image_to_show_circles_on()
+            point_img = get_image_to_work_with()
             clicked_points = []
 
         clicked_points.append({"x": x, "y": y})
-        cv2.circle(point_img, (x, y), 5, (255, 0, 255), -1)
+        cv2.circle(point_img, (x, y), 10, (255, 0, 255), -1)
 
         if len(clicked_points) == 4:
             center_points = get_center_points_of_tiles()
             for point in center_points: 
-                cv2.circle(point_img, point, 3, (0, 255, 255), -1)
-                
+                cv2.circle(point_img, point, 10, (0, 255, 255), -1)
+            print_matrix_of_colors(center_points)
+        
         cv2.imshow('rubic', point_img)
+
+
+def print_matrix_of_colors(center_points):
+    recognized_colors = get_colors(center_points)
+    print("-" * 10)
+    print(f"{recognized_colors[0]} | {recognized_colors[1]} | {recognized_colors[2]}")
+    print("-" * 10)
+    print(f"{recognized_colors[3]} | {recognized_colors[4]} | {recognized_colors[5]}")
+    print("-" * 10)
+    print(f"{recognized_colors[6]} | {recognized_colors[7]} | {recognized_colors[8]}")
+    print("-" * 10)
+
+
+def get_colors(center_points):
+    recognized_colors = []
+    for point in center_points:
+        x = point[0]
+        y = point[1]
+
+        color_sample = get_image_to_work_with()[y - 5 : y + 5, x - 5 : x + 5]
+        cleared_bgr = np.median(color_sample, axis=(0,1)).astype(np.uint8)
+        pixel_as_image = np.array([[cleared_bgr]])
+        pixel_hsv = cv2.cvtColor(pixel_as_image, cv2.COLOR_BGR2HSV)
+        hue = pixel_hsv[0][0][0]
+        saturation = pixel_hsv[0][0][1]
+        value = pixel_hsv[0][0][2]
+
+        letter = '?'
+                
+        color_ranges = {
+            'P': {"hue_ranges": [[0, 2], [170, 179]], "saturation_range": [50, 255], "value_range": [50, 255]},
+            'N': {"hue_ranges": [[3, 21]], "saturation_range": [100, 255], "value_range": [100, 255]},
+            'S': {"hue_ranges": [[22, 34]], "saturation_range": [100, 255], "value_range": [100, 255]},
+            'Z': {"hue_ranges": [[35, 85]], "saturation_range": [32, 255], "value_range": [50, 255]},
+            'K': {"hue_ranges": [[100, 140]], "saturation_range": [50, 255], "value_range": [0, 255]},
+            'F': {"hue_ranges": [[0, 179]], "saturation_range": [0, 37], "value_range": [151, 255]}
+        }
+
+        for key, range in color_ranges.items():
+            s_min, s_max = range["saturation_range"]
+            v_min, v_max = range["value_range"]
+            
+            if not (s_min <= saturation <= s_max and v_min <= value <= v_max):
+                continue 
+                
+            hue_talalat = False
+            for h_min, h_max in range["hue_ranges"]:
+                if h_min <= hue <= h_max:
+                    hue_talalat = True
+                    break
+                    
+            if hue_talalat:
+                letter = key
+                break
+
+        """
+        if letter == '?':
+        print(f"Position: {point}, H: {hue}, S: {saturation}, V: {value}")
+        """
+        
+        recognized_colors.append(letter)
+
+    return recognized_colors
 
 
 def get_center_points_of_tiles():
@@ -101,7 +165,8 @@ def get_center_points_of_tiles():
     
     return tile_center_points
 
-def get_image_to_show_circles_on():
+
+def get_image_to_work_with():
     global img, noisy_img
 
     if noisy_img is None:
@@ -116,3 +181,6 @@ def add_noise_trackbars():
 
 
 start("imgs/Rubik01.jpg")
+#start("imgs/Rubik02.jpg")
+#start("imgs/Rubik03.jpg")
+#start("imgs/Rubik04.png")
