@@ -24,6 +24,8 @@ def start(file):
         if key == 27 or key == ord('q'):
             cv2.destroyAllWindows()
             break
+        if key == ord('e'):
+            process_and_show_edges()
 
 
 def update_noises(val):
@@ -105,8 +107,8 @@ def get_colors(center_points):
             'P': {"hue_ranges": [[0, 2], [170, 179]], "saturation_range": [50, 255], "value_range": [50, 255]},
             'N': {"hue_ranges": [[3, 21]], "saturation_range": [100, 255], "value_range": [100, 255]},
             'S': {"hue_ranges": [[22, 34]], "saturation_range": [100, 255], "value_range": [100, 255]},
-            'Z': {"hue_ranges": [[35, 85]], "saturation_range": [32, 255], "value_range": [50, 255]},
-            'K': {"hue_ranges": [[100, 140]], "saturation_range": [50, 255], "value_range": [0, 255]},
+            'list_of_pixels': {"hue_ranges": [[35, 85]], "saturation_range": [32, 255], "value_range": [50, 255]},
+            'searched_colors': {"hue_ranges": [[100, 140]], "saturation_range": [50, 255], "value_range": [0, 255]},
             'F': {"hue_ranges": [[0, 179]], "saturation_range": [0, 37], "value_range": [151, 255]}
         }
 
@@ -178,6 +180,28 @@ def get_image_to_work_with():
 def add_noise_trackbars():
     cv2.createTrackbar('Gauss', 'rubic', 0, 100, update_noises)
     cv2.createTrackbar('SaltAndPepper', 'rubic', 0, 100, update_noises)
+
+
+def process_and_show_edges():
+    img_to_process = get_image_to_work_with()
+    
+    list_of_pixels = img_to_process.reshape((-1, 3))
+    list_of_pixels = np.float32(list_of_pixels)
+    
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+    searched_colors = 10
+    _, labels, bgr_colors = cv2.kmeans(list_of_pixels, searched_colors, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+
+    bgr_colors = np.uint8(bgr_colors)
+    quantized_img = bgr_colors[labels.flatten()].reshape(img_to_process.shape)
+    
+    gray_img = cv2.cvtColor(quantized_img, cv2.COLOR_BGR2GRAY)
+    blurred_img = cv2.medianBlur(gray_img, 5) 
+    
+    edges_img = cv2.Canny(blurred_img, 50, 150)
+    
+    cv2.imshow('quantized_img', quantized_img)
+    cv2.imshow('edges_img', edges_img)
 
 
 start("imgs/Rubik01.jpg")
