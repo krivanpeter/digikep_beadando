@@ -107,8 +107,8 @@ def get_colors(center_points):
             'P': {"hue_ranges": [[0, 2], [170, 179]], "saturation_range": [50, 255], "value_range": [50, 255]},
             'N': {"hue_ranges": [[3, 21]], "saturation_range": [100, 255], "value_range": [100, 255]},
             'S': {"hue_ranges": [[22, 34]], "saturation_range": [100, 255], "value_range": [100, 255]},
-            'list_of_pixels': {"hue_ranges": [[35, 85]], "saturation_range": [32, 255], "value_range": [50, 255]},
-            'searched_colors': {"hue_ranges": [[100, 140]], "saturation_range": [50, 255], "value_range": [0, 255]},
+            'Z': {"hue_ranges": [[35, 85]], "saturation_range": [32, 255], "value_range": [50, 255]},
+            'K': {"hue_ranges": [[100, 140]], "saturation_range": [50, 255], "value_range": [0, 255]},
             'F': {"hue_ranges": [[0, 179]], "saturation_range": [0, 37], "value_range": [151, 255]}
         }
 
@@ -183,6 +183,7 @@ def add_noise_trackbars():
 
 
 def process_and_show_edges():
+    global clicked_points, point_img
     img_to_process = get_image_to_work_with()
     
     list_of_pixels = img_to_process.reshape((-1, 3))
@@ -199,9 +200,72 @@ def process_and_show_edges():
     blurred_img = cv2.medianBlur(gray_img, 5) 
     
     edges_img = cv2.Canny(blurred_img, 50, 150)
+
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (13, 13))
+    closed_edges_img = cv2.morphologyEx(edges_img, cv2.MORPH_CLOSE, kernel)
     
-    cv2.imshow('quantized_img', quantized_img)
-    cv2.imshow('edges_img', edges_img)
+    #cv2.imshow('quantized_img', quantized_img)
+    #cv2.imshow('edges_img', edges_img)
+    #cv2.imshow('closed_edges_img', closed_edges_img)
+    find_and_process_face(closed_edges_img)
+
+
+def find_and_process_face(closed_edges):
+    global clicked_points
+    
+    display_img = get_image_to_work_with()
+    
+    contours_list, _ = cv2.findContours(closed_edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours_list = sorted(contours_list, key=cv2.contourArea, reverse=True)
+    
+    for contour in contours_list:
+        area = cv2.contourArea(contour)
+        if area > 3000: 
+            periphery = cv2.arcLength(contour, True)
+            approximation = cv2.approxPolyDP(contour, 0.05 * periphery, True)
+            
+            if len(approximation) == 4:
+                cv2.drawContours(display_img, [approximation], -1, (0, 255, 0), 3)
+                
+                pts = approximation.reshape(4, 2)
+                ordered_pts = get_ordered_points(pts)
+                
+                clicked_points = []
+                for pt in ordered_pts:
+                    clicked_points.append({"x": int(pt[0]), "y": int(pt[1])})
+                
+                center_points = get_center_points_of_tiles()
+                for point in center_points: 
+                    cv2.circle(display_img, point, 10, (0, 255, 255), -1)
+                
+                print_matrix_of_colors(center_points)
+                
+                break 
+
+    cv2.imshow('display_img', display_img)
+
+
+def get_ordered_points(points):
+    ordered_points = []
+    point_sums = []
+    point_diffs = []
+    
+    for point in points:
+        point_sums.append(point[0] + point[1])
+        point_diffs.append(point[1] - point[0])
+
+    top_left_index = point_sums.index(min(point_sums))
+    bottom_right_index = point_sums.index(max(point_sums))
+    
+    top_right_index = point_diffs.index(min(point_diffs))
+    bottom_left_index = point_diffs.index(max(point_diffs))
+    
+    ordered_points.append(points[top_left_index])     
+    ordered_points.append(points[top_right_index])     
+    ordered_points.append(points[bottom_right_index])     
+    ordered_points.append(points[bottom_left_index])     
+            
+    return ordered_points
 
 
 start("imgs/Rubik01.jpg")
